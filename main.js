@@ -108,11 +108,11 @@ const btnQuests = document.getElementById("btn-quests");
 const btnTravel = document.getElementById("btn-travel");
 
 // --- Patch / Update System ---
-const GAME_VERSION = "0.0.5b";
-const GITHUB_REPO = "Maki1612/Script-Heroes"; // Use "User/Repo" format
+const GAME_VERSION = "0.0.5c";
+const GITHUB_REPO = "Maki1612/Script-Heroes";
 
 const PATCH_NOTES = {
-  "0.0.5b": [
+  "0.0.5c": [
     "Placeholder for new changes."
   ],
   "0.0.4": [
@@ -187,33 +187,47 @@ function compareVersions(local, remote) {
 async function checkForUpdate() {
   try {
     console.log(`[UpdateCheck] Checking repository: ${GITHUB_REPO}`);
-    const url = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/version.json?t=${Date.now()}`;
-    const res = await fetch(url, { cache: "no-store" });
+
+    // Attempt 1: Try 'main' branch
+    let url = `https://raw.githubusercontent.com/${GITHUB_REPO}/main/version.json?t=${Date.now()}`;
+    let res = await fetch(url, { cache: "no-store" });
 
     if (!res.ok) {
-      console.warn(`[UpdateCheck] Failed to fetch version.json: ${res.status} ${res.statusText}`);
-      console.log(`[UpdateCheck] Ensure 'version.json' exists in the 'main' branch of ${GITHUB_REPO}`);
+      console.warn(`[UpdateCheck] 'main' branch check failed (${res.status}). Trying 'master' branch...`);
+      url = `https://raw.githubusercontent.com/${GITHUB_REPO}/master/version.json?t=${Date.now()}`;
+      res = await fetch(url, { cache: "no-store" });
+    }
+
+    if (!res.ok) {
+      console.warn(`[UpdateCheck] Update check failed: ${res.status} ${res.statusText}`);
+      console.log(`[UpdateCheck] Ensure 'version.json' is pushed to GitHub in 'main' or 'master' branch.`);
       return;
     }
 
     const remote = await res.json();
     latestVersion = remote.version;
-    console.log(`[UpdateCheck] Remote version: ${latestVersion} | Local version: ${GAME_VERSION}`);
+    console.log(`[UpdateCheck] Success! Remote: ${latestVersion} | Local: ${GAME_VERSION}`);
 
     const comparison = compareVersions(GAME_VERSION, latestVersion);
     if (comparison === 1) {
-      console.log(`[UpdateCheck] New update found! Displaying notice.`);
+      console.log(`[UpdateCheck] Update FOUND! Displaying banner.`);
       patchText.textContent = `Update available: v${latestVersion} (current: v${GAME_VERSION})`;
       patchNotice.style.display = "flex";
     } else {
-      console.log(`[UpdateCheck] Up to date (Comparison result: ${comparison})`);
+      console.log(`[UpdateCheck] No update needed (Comparison: ${comparison})`);
     }
   } catch (e) {
-    console.error("[UpdateCheck] Error during check:", e);
+    console.error("[UpdateCheck] Connectivity error:", e);
   }
 }
 
 async function applyPatch() {
+  const versionToUse = latestVersion || GAME_VERSION;
+  const fileName = `script heroes ${versionToUse}.zip`;
+
+  console.log(`[PatchSystem] Starting download: ${fileName}`);
+  console.log(`[PatchSystem] Targeted version: ${versionToUse}`);
+
   // 1. Export saves first
   await exportSaves();
 
@@ -221,9 +235,15 @@ async function applyPatch() {
   const zipUrl = `https://github.com/${GITHUB_REPO}/archive/refs/heads/main.zip`;
   const a = document.createElement("a");
   a.href = zipUrl;
-  const fileName = `script heroes ${latestVersion || GAME_VERSION}.zip`;
   a.download = fileName;
+
+  // Browsers may ignore .download for cross-origin URLs. 
+  // We log this so the user knows what to expect.
+  console.log(`[PatchSystem] Triggering download for: ${zipUrl}`);
+
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
 }
 
 if (btnPatch) {
