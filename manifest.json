@@ -1,0 +1,7 @@
+{
+    "launcher_version": "0.1.0",
+    "launcher_url": "https://github.com/YourName/RepoName/releases/download/v0.1.0/Script.Heroes.exe",
+    "game_version": "0.1.0",
+    "game_patch_url": "https://github.com/YourName/RepoName/releases/download/v0.1.0/MasterPatch.zip",
+    "game_patch_notes": "Welcome to Script Heroes! Initial release."
+}
